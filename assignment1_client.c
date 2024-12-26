@@ -14,9 +14,10 @@ int main(int argc, char *argv[])
 {
 	int sock;
 	struct sockaddr_in serv_addr;
-	char message[BUF_SIZE], file_name[FILE_SIZE];
+	char message[BUF_SIZE], file_name[FILE_SIZE], received_msg[BUF_SIZE];
 	int str_len = 0;
 	int recv_len, recv_cnt;
+	int file_bytes;
 
 	if (argc != 3)
 	{
@@ -56,25 +57,36 @@ int main(int argc, char *argv[])
 
 		write(sock, message, strlen(message));
 
-		recv_cnt = read(sock, file_name, FILE_SIZE);
+		recv_cnt = read(sock, received_msg, BUF_SIZE);
 
-		file_name[recv_cnt] = '\0';
+		received_msg[recv_cnt] = '\0';
+
+		printf("received msg: %s\n", received_msg);
+
+		char *ptr = strtok(received_msg, " ");
+		char *ptr_file_name;
+
+		ptr_file_name = ptr;
+		ptr = strtok(NULL, " ");
+		file_bytes = atoi(ptr);
+		strcpy(file_name, ptr_file_name);
+
+		printf("file name, bytes: %s, %d\n", file_name, file_bytes);
 
 		FILE *fp = fopen(file_name, "wb");
 
 		memset(&file_name, 0, sizeof(file_name));
+
 		if (!fp)
 			error_handling("fopen() failed");
 
-		while ((recv_cnt = read(sock, message, BUF_SIZE)) > 0)
+		while (file_bytes > 0)
 		{
-			message[recv_cnt] = '\0';
+			// message[recv_cnt] = '\0'; // ??????
+			recv_cnt = read(sock, message, BUF_SIZE);
 
-			if(recv_cnt < BUF_SIZE)
-			{
-				fwrite((void *)message, 1, recv_cnt, fp);
-				break;	
-			}
+			file_bytes -= recv_cnt;
+
 			fwrite((void *)message, 1, recv_cnt, fp);
 		}
 		message[recv_cnt] = 0;

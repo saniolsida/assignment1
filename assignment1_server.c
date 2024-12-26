@@ -11,7 +11,6 @@
 #define BUF_SIZE 1024
 #define FILE_SIZE 512
 
-#define PATH "/root/assignment1"
 typedef struct
 {
 	char file_name[FILE_SIZE];
@@ -43,7 +42,6 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	// printf("%s\n",curr_dir);
 	serv_sock = socket(PF_INET, SOCK_STREAM, 0);
 	if (serv_sock == -1)
 		error_handling("socket() error");
@@ -81,11 +79,14 @@ int main(int argc, char *argv[])
 
 		str_len = read(clnt_sock, message, BUF_SIZE - 1);
 		message[str_len] = '\0';
-		printf("%s", message);
+		printf("Received number: %s\n", message);
 
 		int input = atoi(message) - 1;
 
-		write(clnt_sock, file_info[input].file_name, strlen(file_info[input].file_name));
+		char file_name_bytes[BUF_SIZE];
+
+		snprintf(file_name_bytes, sizeof(file_name_bytes), "%s %d",file_info[input].file_name, file_info[input].bytes);
+		write(clnt_sock, file_name_bytes, strlen(file_name_bytes));
 
 
 		FILE *fp = fopen(file_info[input].file_path, "rb");
@@ -121,7 +122,7 @@ int main(int argc, char *argv[])
 void get_file_info(const char *folder_name, file_info_t file_info[], int *index)
 {
 	DIR *dir = opendir(folder_name);
-	int total_count = 0;
+	struct stat sb;
 	if (!dir)
 		error_handling("opendir() error");
 
@@ -135,21 +136,16 @@ void get_file_info(const char *folder_name, file_info_t file_info[], int *index)
 			continue;
 		}
 
-		char path[FILE_SIZE], dup_path[FILE_SIZE];
+		char path[FILE_SIZE];
 		snprintf(path, sizeof(path), "%s/%s", folder_name, entry->d_name);
-		snprintf(dup_path, sizeof(dup_path), "%s/%s", folder_name, entry->d_name);
 		if (stat(path, &st) == -1)
 			error_handling("stat() failed");
 
 		if (S_ISREG(st.st_mode))
 		{
-			FILE *fp = fopen(path, "rb");
-			if (!fp)
-				error_handling("fopen() failed");
-
 			strcpy(file_info[*index].file_path, path); // 파일 경로 저장
 
-			char *ptr = strtok(dup_path, "/");
+			char *ptr = strtok(path, "/");
 			char *file_name;
 			while (ptr != NULL)
 			{
@@ -158,14 +154,10 @@ void get_file_info(const char *folder_name, file_info_t file_info[], int *index)
 			}
 			strcpy(file_info[*index].file_name, file_name); // 파일 이름 저장
 
-			int read_cnt;
-			char buffer[BUF_SIZE];
-			total_count = 0;
-			while ((read_cnt = fread(buffer, 1, BUF_SIZE, fp)) > 0)
-			{
-				total_count += read_cnt;
-			}
-			file_info[*index].bytes = total_count;
+			// stat
+			stat(file_info[*index].file_path, &st);
+
+			file_info[*index].bytes = st.st_size;
 			(*index)++;
 		}
 		if (S_ISDIR(st.st_mode))
