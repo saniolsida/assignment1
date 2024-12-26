@@ -33,6 +33,7 @@ int main(int argc, char *argv[])
 	file_info_t file_info[BUF_SIZE];
 
 	socklen_t clnt_addr_size;
+	char * curr_dir = getcwd(NULL, 0);
 
 	char message[BUF_SIZE];
 
@@ -42,11 +43,12 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	// printf("%s\n",curr_dir);
 	serv_sock = socket(PF_INET, SOCK_STREAM, 0);
 	if (serv_sock == -1)
 		error_handling("socket() error");
 
-	get_file_info(PATH, file_info, &index);
+	get_file_info(curr_dir, file_info, &index);
 
 	memset(&serv_addr, 0, sizeof(serv_addr));
 	serv_addr.sin_family = AF_INET;
